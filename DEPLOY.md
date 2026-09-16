@@ -1,6 +1,6 @@
 # Ubuntu VPS üzerinde yayınlama
 
-Bu site Docker içindeki Caddy ile yayınlanır. Caddy'yi Ubuntu'ya ayrıca kurmanız gerekmez.
+Bu site Docker içindeki Caddy ile yerel `127.0.0.1:8083` portunda yayınlanır. VPS'teki mevcut Nginx, `enybeauty.com` isteklerini Caddy'ye yönlendirir ve HTTPS sertifikasını yönetir. Caddy'yi Ubuntu'ya ayrıca kurmanız gerekmez.
 
 ## 1. Docker ve Compose kurun
 
@@ -43,31 +43,25 @@ Eski kayıt başka dosyadaysa yalnızca o Docker kaydını devre dışı bırak�
 
 ## 2. Alan adını ve portları hazırlayın
 
-Hostinger DNS panelinde `enybeauty.com` için `@` adlı A kaydını `45.131.1.31` adresine yönlendirin. Eski sunucuya giden diğer `@` A kayıtlarını silin. VPS için IPv6 yapılandırmadıysanız eski `@` AAAA kayıtlarını da silin. `www` için eski CDN kaydını kaldırıp `@` alan adına bir CNAME oluşturun; Caddy `www.enybeauty.com` isteklerini ana alan adına yönlendirir. Hostinger CDN açıksa önce devre dışı bırakın. E-posta için kullanılan MX/TXT kayıtlarına dokunmayın.
+Hostinger DNS panelinde `enybeauty.com` için `@` adlı A kaydını `45.131.1.31` adresine yönlendirin. Eski sunucuya giden diğer `@` A kayıtlarını silin. VPS için IPv6 yapılandırmadıysanız eski `@` AAAA kayıtlarını da silin. `www` için eski CDN kaydını kaldırıp `enybeauty.com` alan adına bir CNAME oluşturun. Hostinger CDN açıksa önce devre dışı bırakın. E-posta için kullanılan MX/TXT kayıtlarına dokunmayın.
 
 DNS değişiklikleri yayılana kadar bekleyin; bunu `dig +short A enybeauty.com` ve `dig +short A www.enybeauty.com` komutlarıyla kontrol edebilirsiniz. Her ikisi de `45.131.1.31` adresine çözülmelidir. `dig +short AAAA enybeauty.com` eski sunucunun IPv6 adreslerini döndürmemelidir. VPS sağlayıcısının güvenlik duvarında ve Ubuntu'da 80/TCP ile 443/TCP portlarını açın; SSH erişimini de açık tutun.
 
-Caddy bu iki portu doğrudan kullanır. Başlatmadan önce VPS'te portları kontrol edin:
+Caddy'nin Docker portu sadece yerel arayüze bağlanır. Mevcut Nginx 80 ve 443 portlarını kullanmaya devam eder. `8083` portunun boş olduğunu başlatmadan önce kontrol edin:
 
 ```sh
-sudo ss -ltnp | grep -E ':(80|443) '
-sudo systemctl status nginx --no-pager
+sudo ss -ltnp | grep ':8083 '
 ```
 
-Bu VPS'te Nginx başka bir siteye hizmet ediyorsa onu durdurmayın; Caddy'nin port bağlamasını ve ters proxy düzenini ona göre değiştirmek gerekir. Nginx kullanılmıyorsa kapatıp portları Caddy'ye bırakabilirsiniz:
-
-```sh
-sudo systemctl stop nginx
-sudo systemctl disable nginx
-```
+Çıktı boş olmalıdır. Doluysa `compose.yaml` içindeki host portunu başka boş bir yerel portla değiştirin ve aşağıdaki Nginx `proxy_pass` hedefini de aynı porta ayarlayın.
 
 ## 3. Siteyi başlatın
 
-Önce Mac'teki proje dizininde yeni Docker dosyalarını GitHub'a gönderin:
+Önce Mac'teki proje dizininde yeni yapılandırmayı GitHub'a gönderin:
 
 ```sh
 git add .dockerignore Caddyfile DEPLOY.md Dockerfile compose.yaml
-git commit -m "Add Docker and Caddy deployment"
+git commit -m "Serve Eny Beauty behind existing Nginx"
 git push origin main
 ```
 
@@ -78,16 +72,19 @@ git clone https://github.com/berkesongul/enybeauty.git /opt/enybeauty
 cd /opt/enybeauty
 ```
 
-DNS yönlendirmesi tamamlandıktan sonra:
+Caddy'yi başlatın ve yerel yanıtı doğrulayın:
 
 ```sh
 sudo docker compose config
 sudo docker compose up --build -d
 sudo docker compose ps
 sudo docker compose logs --tail=100 web
+curl -I http://127.0.0.1:8083/
 ```
 
-Tarayıcıda `https://enybeauty.com` ve `https://www.enybeauty.com` adreslerini açın. Caddy, uygun DNS ve açık portlarla HTTPS sertifikalarını otomatik alır ve yeniler. Sertifikalar `caddy_data` volume'unda kalır; bu volume'u rutin güncellemelerde silmeyin.
+Nginx'e `enybeauty.com` ve `www.enybeauty.com` için ayrı bir sanal sunucu ekleyin; `proxy_pass` hedefi `http://127.0.0.1:8083` olmalıdır. Mevcut Nginx site tanımlarını incelemeden bu adımı uygulamayın. Önce `sudo nginx -t` ile sözdizimini kontrol edin, sonra Nginx'i yeniden yükleyin. HTTPS sertifikasını Nginx/Certbot tarafında oluşturun; Docker içindeki Caddy bu düzende TLS yönetmez.
+
+Tarayıcıda `https://enybeauty.com` ve `https://www.enybeauty.com` adreslerini açın.
 
 ## Güncelleme
 
@@ -98,4 +95,4 @@ git pull --ff-only
 sudo docker compose up --build -d
 ```
 
-Site açılmıyorsa DNS kaydını, port 80/443 erişimini ve `sudo docker compose logs web` çıktısını kontrol edin.
+Site açılmıyorsa DNS kaydını, Nginx site tanımını, `curl -I http://127.0.0.1:8083/` yanıtını ve `sudo docker compose logs web` çıktısını kontrol edin.
