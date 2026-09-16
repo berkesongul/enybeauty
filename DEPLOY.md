@@ -45,7 +45,21 @@ Eski kayıt başka dosyadaysa yalnızca o Docker kaydını devre dışı bırak�
 
 Hostinger DNS panelinde `enybeauty.com` için `@` adlı A kaydını `45.131.1.31` adresine yönlendirin. Eski sunucuya giden diğer `@` A kayıtlarını silin. VPS için IPv6 yapılandırmadıysanız eski `@` AAAA kayıtlarını da silin. `www` için eski CDN kaydını kaldırıp `@` alan adına bir CNAME oluşturun; Caddy `www.enybeauty.com` isteklerini ana alan adına yönlendirir. Hostinger CDN açıksa önce devre dışı bırakın. E-posta için kullanılan MX/TXT kayıtlarına dokunmayın.
 
-DNS değişiklikleri yayılana kadar bekleyin; bunu `dig +short A enybeauty.com` ve `dig +short A www.enybeauty.com` komutlarıyla kontrol edebilirsiniz. Her ikisi de `45.131.1.31` adresine çözülmelidir. `dig +short AAAA enybeauty.com` eski sunucunun IPv6 adreslerini döndürmemelidir. VPS sağlayıcısının güvenlik duvarında ve Ubuntu'da 80/TCP ile 443/TCP portlarını açın; SSH erişimini de açık tutun. Bu portlarda çalışan başka bir web sunucusu varsa önce çakışmayı giderin.
+DNS değişiklikleri yayılana kadar bekleyin; bunu `dig +short A enybeauty.com` ve `dig +short A www.enybeauty.com` komutlarıyla kontrol edebilirsiniz. Her ikisi de `45.131.1.31` adresine çözülmelidir. `dig +short AAAA enybeauty.com` eski sunucunun IPv6 adreslerini döndürmemelidir. VPS sağlayıcısının güvenlik duvarında ve Ubuntu'da 80/TCP ile 443/TCP portlarını açın; SSH erişimini de açık tutun.
+
+Caddy bu iki portu doğrudan kullanır. Başlatmadan önce VPS'te portları kontrol edin:
+
+```sh
+sudo ss -ltnp | grep -E ':(80|443) '
+sudo systemctl status nginx --no-pager
+```
+
+Bu VPS'te Nginx başka bir siteye hizmet ediyorsa onu durdurmayın; Caddy'nin port bağlamasını ve ters proxy düzenini ona göre değiştirmek gerekir. Nginx kullanılmıyorsa kapatıp portları Caddy'ye bırakabilirsiniz:
+
+```sh
+sudo systemctl stop nginx
+sudo systemctl disable nginx
+```
 
 ## 3. Siteyi başlatın
 
