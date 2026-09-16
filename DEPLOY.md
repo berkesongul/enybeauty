@@ -92,7 +92,7 @@ sudo systemctl reload nginx
 curl -I http://enybeauty.com/
 ```
 
-Bu VPS'te Certbot zaten kurulu. HTTP yanıtı doğruysa iki alan adı için sertifikayı alın ve Nginx'e uygulayın:
+Bu VPS'te Certbot zaten kurulu. `sudo certbot plugins` çıktısında `nginx` eklentisinin bulunduğunu doğrulayın. HTTP yanıtı doğruysa iki alan adı için sertifikayı alın ve Nginx'e uygulayın:
 
 ```sh
 sudo certbot --nginx -d enybeauty.com -d www.enybeauty.com
