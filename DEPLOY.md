@@ -60,7 +60,7 @@ sudo ss -ltnp | grep ':8083 '
 Önce Mac'teki proje dizininde yeni yapılandırmayı GitHub'a gönderin:
 
 ```sh
-git add .dockerignore Caddyfile DEPLOY.md Dockerfile compose.yaml
+git add DEPLOY.md deploy/nginx-enybeauty.conf
 git commit -m "Serve Eny Beauty behind existing Nginx"
 git push origin main
 ```
@@ -82,7 +82,27 @@ sudo docker compose logs --tail=100 web
 curl -I http://127.0.0.1:8083/
 ```
 
-Nginx'e `enybeauty.com` ve `www.enybeauty.com` için ayrı bir sanal sunucu ekleyin; `proxy_pass` hedefi `http://127.0.0.1:8083` olmalıdır. Mevcut Nginx site tanımlarını incelemeden bu adımı uygulamayın. Önce `sudo nginx -t` ile sözdizimini kontrol edin, sonra Nginx'i yeniden yükleyin. HTTPS sertifikasını Nginx/Certbot tarafında oluşturun; Docker içindeki Caddy bu düzende TLS yönetmez.
+Mevcut Nginx yapılandırmasında `enybeauty.com` adını kullanan başka bir site olmadığını doğrulayın. Ardından `deploy/nginx-enybeauty.conf` dosyasını yeni bir site tanımı olarak etkinleştirin:
+
+```sh
+sudo cp deploy/nginx-enybeauty.conf /etc/nginx/sites-available/enybeauty
+sudo ln -s /etc/nginx/sites-available/enybeauty /etc/nginx/sites-enabled/enybeauty
+sudo nginx -t
+sudo systemctl reload nginx
+curl -I http://enybeauty.com/
+```
+
+Bu VPS'te Certbot zaten kurulu. HTTP yanıtı doğruysa iki alan adı için sertifikayı alın ve Nginx'e uygulayın:
+
+```sh
+sudo certbot --nginx -d enybeauty.com -d www.enybeauty.com
+sudo nginx -t
+curl -I https://enybeauty.com/
+curl -I https://www.enybeauty.com/
+sudo certbot renew --dry-run
+```
+
+Certbot sorarsa HTTP isteklerini HTTPS'e yönlendirmeyi seçin. Docker içindeki Caddy bu düzende TLS yönetmez; sertifikalar mevcut Nginx/Certbot kurulumunda kalır.
 
 Tarayıcıda `https://enybeauty.com` ve `https://www.enybeauty.com` adreslerini açın.
 
