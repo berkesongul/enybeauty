@@ -1,0 +1,9 @@
+enybeauty.com {
+    root * /srv
+    encode zstd gzip
+    file_server
+}
+
+www.enybeauty.com {
+    redir https://enybeauty.com{uri} permanent
+}
