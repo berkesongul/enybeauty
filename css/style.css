@@ -1028,6 +1028,10 @@ h6 {
     max-width: 500px;
     margin: 0 auto;
   }
+
+  .partners-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 768px) {
